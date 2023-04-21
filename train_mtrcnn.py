@@ -20,7 +20,7 @@ from collections import OrderedDict
 from torch.utils.data import DataLoader
 from datasets.dataset import Cholec80Dataset
 from models.endotnet import EndotNet
-from models.mtrcnn import MultiTaskRCNN,MTRCNN_CL
+from models.mtrcnn import MultiTaskRCNN, MTRCNN_CL
 from models.swin_transformer import SwinTransformer, build_swin_transformer
 from models.video_swin_transfromer import SwinTransformer3D, build_video_swin_transformer
 
@@ -60,7 +60,7 @@ def train_one_epoch(opts, model, criterions, optimizer, data_loader, device, epo
             phases = torch.autograd.Variable(phases.cuda()) if device == "gpu" else torch.autograd.Variable(phases)
 
             optimizer.zero_grad()
-            
+
             if not opts.use_kl_divergence:
                 tool_logits, phase_logits = model(imgs)
 
@@ -79,7 +79,7 @@ def train_one_epoch(opts, model, criterions, optimizer, data_loader, device, epo
 
                 pbar.set_description(f'Train Epoch [{epoch}/{opts.epochs}]')
                 pbar.set_postfix(loss=total_loss.item(), tool_acc=train_tool_correct_num.item() / ((idx + 1) * opts.batch_size * 7),
-                                phase_acc=train_phase_correct_num.item() / ((idx + 1) * opts.batch_size))
+                                 phase_acc=train_phase_correct_num.item() / ((idx + 1) * opts.batch_size))
 
             else:
                 tool_logits, phase_logits, kl_logits = model(imgs)
@@ -99,14 +99,14 @@ def train_one_epoch(opts, model, criterions, optimizer, data_loader, device, epo
                 train_phase_correct_num += torch.sum(phase_pred == phases.data)
                 train_phase2tool_correct_num += torch.sum(phase2tool_pred.data == tools.data.cpu())
 
-                kl_loss = torch.abs(kl_criterion(kl_logits,tool_logits))
+                kl_loss = torch.abs(kl_criterion(kl_logits, tool_logits))
                 total_loss = tool_loss + phase_loss + kl_loss * opts.alpha
                 total_loss.backward()
                 optimizer.step()
-            
+
                 pbar.set_description(f'Train Epoch [{epoch}/{opts.epochs}]')
                 pbar.set_postfix(loss=total_loss.item(), tool_acc=train_tool_correct_num.item() / ((idx + 1) * opts.batch_size * 7),
-                                phase_acc=train_phase_correct_num.item() / ((idx + 1) * opts.batch_size))
+                                 phase_acc=train_phase_correct_num.item() / ((idx + 1) * opts.batch_size))
 
     train_duration_time = time.time() - train_start_time
     train_tool_accuracy = train_tool_correct_num / len(data_loader) / 7
@@ -205,7 +205,7 @@ def main():
         img_list, combined_label_list, fix_modal=False)
     train_tool_list, test_tool_list, val_tool_list, train_phase_list, test_phase_list, val_phase_list = train_label[:, :-1], test_label[:, :-1], \
         val_label[:, :-1], train_label[:, -
-                                       1], test_label[:, -1], val_label[:, -1]
+                                          1], test_label[:, -1], val_label[:, -1]
 
     train_transforms = torchvision.transforms.Compose([
         torchvision.transforms.RandomCrop(224),
@@ -247,7 +247,7 @@ def main():
     endotnet = EndotNet().cuda()
     mtrcnn = MultiTaskRCNN(opts.clip_size)
     mtrcnn_cl = MTRCNN_CL(opts.clip_size)
-    
+
     if opts.use_kl_divergence:
         model = mtrcnn_cl.cuda() if use_gpu else mtrcnn_cl
     else:
@@ -259,7 +259,7 @@ def main():
     tools_criterion = nn.BCEWithLogitsLoss(size_average=False).cuda() if use_gpu else nn.BCEWithLogitsLoss(size_average=False)
     phases_criterion = nn.CrossEntropyLoss(size_average=False).cuda() if use_gpu else nn.CrossEntropyLoss(size_average=False)
     kl_criterion = nn.KLDivLoss(size_average=False).cuda() if use_gpu else nn.KLDivLoss(size_average=False)
-    criterions = [tools_criterion, phases_criterion,kl_criterion] if opts.use_kl_divergence else [tools_criterion,phases_criterion]
+    criterions = [tools_criterion, phases_criterion, kl_criterion] if opts.use_kl_divergence else [tools_criterion, phases_criterion]
 
     # 优化器
     if opts.optimizer == 'sgd':
@@ -324,16 +324,17 @@ def main():
         save_tool_train = int("{:4.0f}".format(correspond_tool_train_accuracy * 10000))
         save_phase_train = int("{:4.0f}".format(correspond_phase_train_accuracy * 10000))
         public_name = opts.model \
-            + "_epoch_" + str(opts.epochs) \
-            + "_length_" + str(opts.clip_size) \
-            + "_opt_" + str(opts.optimizer) \
-            + "_batch_" + str(opts.batch_size) \
+                      + "_epoch_" + str(opts.epochs) \
+                      + "_length_" + str(opts.clip_size) \
+                      + "_opt_" + str(opts.optimizer) \
+                      + "_batch_" + str(opts.batch_size) \
                       + "_tool_train_" + str(correspond_tool_train_accuracy) \
                       + "_phase_train_" + str(correspond_phase_train_accuracy) \
                       + "_tool_val_" + str(best_tool_val_accuracy) \
                       + "_phase_val_" + str(best_phases_val_accuracy)
         model_name = configs.model_path + public_name + ".pth"
         torch.save(best_model_wts, model_name)
+
 
 if __name__ == '__main__':
     main()

@@ -54,6 +54,23 @@ def train_test_valid_split(data, label, test_size=0.6, fix_modal=True):
     test_data, val_data, test_label, val_label = train_test_split(test_data, test_label, test_size=0.5, random_state=configs.seed)
     return train_data, test_data, val_data, train_label, test_label, val_label
 
+def train_val_split(data, label, test_size=0.6, fix_modal=True):
+    """
+    划分训练集、测试集和验证集
+
+    :param test_size: 测试集和验证集占总数据的比例
+    :param fix_modal: 为True比例固定为4:3:3；False按设置比率划分
+    :return:
+    """
+    if fix_modal:
+        data_len = len(data)
+        train_data, train_label = data[:int(data_len * 0.6)], label[:int(data_len * 0.6)]
+        val_data, val_label = data[int(data_len * 0.6):int(data_len)], label[int(data_len * 0.6):int(data_len)]
+        return train_data, val_data, train_label, val_label
+
+    train_data, val_data, train_label, val_label = train_test_split(data, label, test_size=test_size, random_state=configs.seed)
+    return train_data, val_data, train_label, val_label
+
 
 def load_pretrained_swin_transformer(model,checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
