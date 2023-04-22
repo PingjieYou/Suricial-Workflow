@@ -10,6 +10,7 @@ Cholec80Frames = Cholec80 + "/frames"  # 数据集帧路径
 Cholec80ProcessedFrames = Cholec80 + "/processed_frames"  # 预处理后的帧路径
 Cholec80ToolAnnotations = Cholec80 + "/tool_annotations"  # 器具标签路径
 Cholec80PhaseAnnotations = Cholec80 + "/phase_annotations"  # 阶段标签路径
+Cholec80PhaseAnticipations = Cholec80 + "/phase_anticipation_annotations"  # 阶段预测标签路径
 
 ## 数据处理模块
 FPS = 25  # 视频取帧率
@@ -17,9 +18,11 @@ WIDTH = 250  # 图像宽度
 HEIGHT = 250  # 图像高度
 
 ## 总数据、训练集数据和测试集数据
+NumPicklePath = "./pkl/num.pkl"  # 数量
 ImagePicklePath = "./pkl/image.pkl"  # image路径数据
 ToolPicklePath = "./pkl/tool.pkl"  # tool数据
 PhasePicklePath = "./pkl/phase.pkl"  # phase数据
+AnticipationPicklePath = "./pkl/anticipation.pkl"  # anticipation数据
 
 ## 训练配置
 seed = 3407

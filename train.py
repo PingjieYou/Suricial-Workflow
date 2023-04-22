@@ -20,10 +20,7 @@ from torch.nn import DataParallel
 from collections import OrderedDict
 from torch.utils.data import DataLoader
 from datasets.dataset import Cholec80Dataset
-from models.endotnet import EndotNet
-from models.mtrcnn import MultiTaskRCNN
-from models.swin_transformer import SwinTransformer, build_swin_transformer
-from models.video_swin_transfromer import SwinTransformer3D, build_video_swin_transformer
+from models.sv_transformer import SVTransformer
 
 
 def main():
@@ -95,12 +92,11 @@ def main():
     val_dataloader = DataLoader(dataset=val_dataset, batch_size=opts.batch_size,
                                 num_workers=0, pin_memory=False, shuffle=False, drop_last=True)
 
+
+
     # 模型
-    video_swim_transformer = build_video_swin_transformer()
-    swin_transformer = build_swin_transformer()
-    endotnet = EndotNet().cuda()
-    mtrcnn = MultiTaskRCNN(opts.clip_size)
-    model = mtrcnn.cuda() if use_gpu else mtrcnn
+    model = SVTransformer(opts.clip_size)
+    model = model.cuda() if use_gpu else model
     model = DataParallel(model)
 
     # 损失函数
@@ -111,27 +107,16 @@ def main():
     criterions = [tools_criterion, phases_criterion]
 
     # 优化器
-    if opts.model == 'mtrcnn':
-        if opts.optimizer == 'sgd':
-            optimizer = torch.optim.SGD([
-                {"params": model.module.share.parameters()},
-                {"params": model.module.lstm.parameters(), "lr": opts.lr},
-                {"params": model.module.fc.parameters(), "lr": opts.lr},
-                {"params": model.module.fc2.parameters(), "lr": opts.lr}
-            ], lr=opts.lr / 10, momentum=opts.momentum, dampening=opts.dampening, weight_decay=opts.weight_decay, nesterov=opts.nesterov)
-        elif opts.optimizer == 'adam':
-            optimizer = torch.optim.Adam(model.parameters(), lr=opts.lr)
+    if opts.optimizer == "sgd":
+        optimizer = torch.optim.SGD(model.parameters(), lr=opts.lr, momentum=opts.momentum, weight_decay=opts.weight_decay,
+                              dampening=opts.dampening, nesterov=opts.nesterov)
+    elif opts.optimizer == "adam":
+        optimizer = torch.optim.Adam(model.parameters(), lr=opts.lr, weight_decay=opts.weight_decay)
+    else:
+        raise Exception("Optimizer not supported.")
 
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=opts.sgd_step, gamma=opts.sgd_gamma)
-
-    elif opts.model == 'endotnet':
-        if opts.optimizer == 'sgd':
-            optimizer = torch.optim.SGD(model.module.parameters(), lr=opts.lr / 10, momentum=opts.momentum,
-                                        dampening=opts.dampening, weight_decay=opts.weight_decay, nesterov=opts.nesterov)
-        elif opts.optimizer == 'adam':
-            optimizer = torch.optim.Adam(model.module.parameters(), lr=opts.lr)
-
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=opts.sgd_step, gamma=opts.sgd_gamma)
+    # 学习率调整
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=opts.sgd_step, gamma=opts.sgd_gamma)
 
     # 训练精度等记录
     best_model_weight = copy.deepcopy(model.state_dict())

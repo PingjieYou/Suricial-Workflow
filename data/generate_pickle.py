@@ -57,6 +57,18 @@ def get_phase_path_list():
     return phase_path_list
 
 
+def get_phase_anticipation_path_list():
+    """
+    获取手术阶段预测txt绝对路径
+
+    :return:
+    """
+    anticipation_name_list = os.listdir(configs.Cholec80PhaseAnnotations)
+    anticipation_path_list = [configs.Cholec80PhaseAnticipations + "/" + phase_name for phase_name in anticipation_name_list]
+
+    return anticipation_path_list
+
+
 ## 手术图像处理
 img_dir_list = sorted(get_img_dir_list())
 
@@ -65,24 +77,30 @@ tool_path_list = sorted(get_tool_path_list())
 
 ## 手术阶段数据处理
 phase_path_list = sorted(get_phase_path_list())
+phase_anticipation_path_list = sorted(get_phase_anticipation_path_list())
 index2phase = ['Preparation', 'CalotTriangleDissection', 'ClippingCutting', 'GallbladderDissection',
                'GallbladderPackaging', 'CleaningCoagulation', 'GallbladderRetraction']
 phase2index = {index2phase[index]: index for index in range(len(index2phase))}
 
 ## 所需序列化数据的集合
+num_list = []
 img_list = []
 tool_list = []
 phase_list = []
+anticipation_list = []
 
 ## 开始序列化数据
 for i in range(len(img_dir_list)):
     img_list_tmp = []
     tool_list_tmp = []
     phase_list_tmp = []
+    anticipation_list_tmp = []
+
     img_dir = img_dir_list[i]
     img_path_list = sorted(get_img_path_list(img_dir))  # 图像绝对路径集合
     tool_file = open(tool_path_list[i])  # 手术工具文件
     phase_file = open(phase_path_list[i])  # 手术阶段文件
+    anticipation_file = open(phase_anticipation_path_list[i])  # 手术阶段预测文件
 
     ## 手术器具提取，并添加手术图像
     tool_count = 0
@@ -97,9 +115,6 @@ for i in range(len(img_dir_list)):
             for col in range(1, len(tool_split)):
                 tool_vector.append(int(tool_split[col]))
             tool_list_tmp.append(tool_vector)
-            # print(img_list_tmp)
-            # print(tool_list_tmp)
-            # assert 0
     ## 手术阶段提取
     phase_count = 0
     for phase_line in phase_file:
@@ -108,10 +123,32 @@ for i in range(len(img_dir_list)):
         if phase_count % 25 == 2 and (phase_count // 25) < len(tool_list_tmp):
             phase_split = phase_line.split()
             phase_list_tmp.append(phase2index[phase_split[1]])
+    ## 阶段预测值提取
+    anticipation_count = 0
+    for anticipation_line in anticipation_file:
+        anticipation_count += 1
+        ## 每25帧取一次，最初有效行为1
+        if anticipation_count % 25 == 1 and (anticipation_count // 25) < len(tool_list_tmp):
+            anticipation_split = anticipation_line.split()
+            anticipation_float_list = []
+            anticipation_float_list.append(float(anticipation_split[0]))
+            anticipation_float_list.append(float(anticipation_split[1]))
+            anticipation_float_list.append(float(anticipation_split[2]))
+            anticipation_float_list.append(float(anticipation_split[3]))
+            anticipation_float_list.append(float(anticipation_split[4]))
+            anticipation_float_list.append(float(anticipation_split[5]))
+            anticipation_float_list.append(float(anticipation_split[6]))
+            anticipation_list_tmp.append(anticipation_float_list)
+
     ## 数据拼接
+    num_list.append(len(img_list_tmp))
     img_list += img_list_tmp
     tool_list += tool_list_tmp
     phase_list += phase_list_tmp
+    anticipation_list += anticipation_list_tmp
+
+with open("." + configs.NumPicklePath, "wb") as f:
+    pickle.dump(num_list, f)
 
 with open("." + configs.ImagePicklePath, "wb") as f:
     pickle.dump(img_list, f)
@@ -121,5 +158,8 @@ with open("." + configs.ToolPicklePath, "wb") as f:
 
 with open("." + configs.PhasePicklePath, "wb") as f:
     pickle.dump(phase_list, f)
+
+with open("." + configs.AnticipationPicklePath, "wb") as f:
+    pickle.dump(anticipation_list, f)
 
 print("数据序列化完成！")
